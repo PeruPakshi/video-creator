@@ -1,0 +1,43 @@
+name: Generate AI clip
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: Describe the scene and motion
+        required: true
+        type: string
+      aspect_ratio:
+        description: Video shape
+        type: choice
+        default: '16:9'
+        options: ['16:9', '9:16', '1:1']
+permissions:
+  contents: read
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate clip
+        env:
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          VIDEO_PROMPT: ${{ inputs.prompt }}
+          ASPECT_RATIO: ${{ inputs.aspect_ratio }}
+        run: python generate_clip.py --prompt "$VIDEO_PROMPT" --aspect-ratio "$ASPECT_RATIO"
+      - name: Validate MP4
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -v error -i outputs/clip/video.mp4 -f null -
+          ffprobe -v error -show_entries stream=codec_name,width,height -show_entries format=duration -of json outputs/clip/video.mp4 > outputs/clip/media-info.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-clip-${{ github.run_id }}
+          path: outputs/clip/
+          if-no-files-found: ignore
+          retention-days: 7
