@@ -1,0 +1,17 @@
+name: Check video pipeline
+on:
+  push:
+    paths: ["generate_clip.py", "test_generate_clip.py", ".github/workflows/check-pipeline.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Test queue and download handling without paid generation
+        run: python -m unittest test_generate_clip -v
